@@ -12,13 +12,21 @@ import torchvision
 import torch
 from RedNet_train import image_h, image_w
 
-# changed for minos
+# Gibson Dataset
 img_dir_train_file = './data/minos_data/img_dir_train.txt'
 depth_dir_train_file = './data/minos_data/depth_dir_train.txt'
 label_dir_train_file = './data/minos_data/label_train.txt'
 img_dir_test_file = './data/minos_data/img_dir_test.txt'
 depth_dir_test_file = './data/minos_data/depth_dir_test.txt'
 label_dir_test_file = './data/minos_data/label_test.txt'
+
+# changed for minos
+# img_dir_train_file = './data/minos_data/img_dir_train.txt'
+# depth_dir_train_file = './data/minos_data/depth_dir_train.txt'
+# label_dir_train_file = './data/minos_data/label_train.txt'
+# img_dir_test_file = './data/minos_data/img_dir_test.txt'
+# depth_dir_test_file = './data/minos_data/depth_dir_test.txt'
+# label_dir_test_file = './data/minos_data/label_test.txt'
 
 #img_dir_train_file = './data/img_dir_train.txt'
 #depth_dir_train_file = './data/depth_dir_train.txt'
