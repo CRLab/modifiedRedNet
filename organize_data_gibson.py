@@ -5,6 +5,8 @@ import numpy as np
 import scipy.misc
 import tqdm
 
+low = 80
+high = 250
 
 def concatenate_segmentation_labels(segmentation_npy_path, out_path):
     # https://github.com/niessner/Matterport/blob/master/metadata/category_mapping.tsv
@@ -46,15 +48,15 @@ def generate_metadata(rgb_file_path, depth_file_path, labels_file_path, save_loc
         classes and the med class frequency, and colours for every single class
         all saved in a json file in the desired save_location.
     Inputs:
-        rgb_filepath (str): path to training rgb images
-        depth_file_path (str): path to training depth images
-        labels_file_path (str): path to training labels
+        rgb_filepath (str): path to rgb images
+        depth_file_path (str): path to depth images
+        labels_file_path (str): path to labels
         save_loc (str): save location path
     """
     # calculate dimensions of images
     # To maximize efficiency, the function assumes that images are of the same
     # dimension
-    with open(train_rgb_filepath, mode='r') as f:
+    with open(rgb_file_path, mode='r') as f:
         image_path = f.readline().strip()
         trial_image = scipy.misc.imread(image_path)
         assert isinstance(trial_image, np.ndarray), \
