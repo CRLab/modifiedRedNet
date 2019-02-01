@@ -4,7 +4,8 @@ import progressbar
 import numpy as np
 import scipy.misc
 import tqdm
-
+import random
+import json
 low = 80
 high = 250
 
@@ -76,7 +77,7 @@ def generate_metadata(rgb_file_path, depth_file_path, labels_file_path, save_loc
                 else:
                     class_count[element] += 1
     total_pixel_count = np.sum(list(class_count.values()))
-    class_prob = {key: class_count[key] / float(total_pixel_count) \
+    class_prob = {str(key): class_count[key] / float(total_pixel_count) \
                   for key in class_count}
     prob_median = np.median(list(class_prob.values()))
     med_freq = {key: prob_median / float(class_prob[key]) for key in class_prob}

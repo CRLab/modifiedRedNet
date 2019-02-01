@@ -71,7 +71,6 @@ def train():
         NUM_CLASSES = metadata['num_classes']
         colours = metadata['colours']
         med_freq = metadata['med_freq']
-
     else:
         raise IOError ("could not find metadata parameters. Make sure to create the file before training.")
 
@@ -156,20 +155,20 @@ def train():
 
                 for name, param in model.named_parameters():
                     writer.add_histogram(name, param.clone().cpu().data.numpy(), global_step, bins='doane')
-                grid_image = make_grid(image[:3].clone().cpu().data, 3, normalize=True)
-                writer.add_image('image', grid_image, global_step)
-                grid_image = make_grid(depth[:3].clone().cpu().data, 3, normalize=True)
-                writer.add_image('depth', grid_image, global_step)
+                # grid_image = make_grid(image[:3].clone().cpu().data, 3, normalize=True)
+                # writer.add_image('image', grid_image, global_step)
+                # grid_image = make_grid(depth[:3].clone().cpu().data, 3, normalize=True)
+                # writer.add_image('depth', grid_image, global_step)
 
-                grid_image = make_grid(utils.color_label(
-                                        torch.max(pred_scales[0][:3], 1)[1] + 1, 
-                                        label_colours=colours), 3, normalize=False,
-                                       range=(0, 255))
-                writer.add_image('Predicted label', grid_image, global_step)
-                grid_image = make_grid(utils.color_label(target_scales[0][:3],
-                                            label_colours=colours), 
-                                            3, normalize=False, range=(0, 255))
-                writer.add_image('Groundtruth label', grid_image, global_step)
+                # grid_image = make_grid(utils.color_label(
+                #                         torch.max(pred_scales[0][:3], 1)[1] + 1, 
+                #                         label_colours=colours), 3, normalize=False,
+                #                        range=(0, 255))
+                # writer.add_image('Predicted label', grid_image, global_step)
+                # grid_image = make_grid(utils.color_label(target_scales[0][:3],
+                #                             label_colours=colours), 
+                #                             3, normalize=False, range=(0, 255))
+                # writer.add_image('Groundtruth label', grid_image, global_step)
                 writer.add_scalar('CrossEntropyLoss', loss.data, global_step=global_step)
                 writer.add_scalar('Learning rate', scheduler.get_lr()[0], global_step=global_step)
                 last_count = local_count
