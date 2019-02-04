@@ -5,6 +5,7 @@ import imageio
 import json
 import skimage.transform
 import torchvision
+import numpy as np
 from tqdm import tqdm
 
 import torch.optim
@@ -118,13 +119,18 @@ def inference():
         depth = depth.to(device).unsqueeze_(0)
 
         pred = model(image, depth)
-        output = utils.color_label(torch.max(pred, 1)[1] + 1, label_colours=colours)[0]
+        labels = torch.max(pred, 1)[1] + 1
+        labels = labels.clone().cpu().data.numpy()
+        if len(np.unique(labels)) == 1:
+            continue
         
+        output = utils.color_label_cpu(labels, label_colours=colours)[0]
+
         base = os.path.basename(this_label)
         base = base[:-4] + '.png'
         final_output = os.path.join(args.output, base)
         
-        imageio.imsave(final_output, output.cpu().numpy().transpose((1, 2, 0)))
+        imageio.imsave(final_output, output)
 
 if __name__ == '__main__':
     inference()

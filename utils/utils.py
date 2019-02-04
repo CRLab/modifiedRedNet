@@ -2,6 +2,7 @@ import numpy as np
 from torch import nn
 import torch
 import os
+import numba
 
 med_frq = [0.382900, 0.452448, 0.637584, 0.377464, 0.585595,
            0.479574, 0.781544, 0.982534, 1.017466, 0.624581,
@@ -114,15 +115,34 @@ class CrossEntropyLoss2d(nn.Module):
 
 def color_label(label, label_colours=label_colours):
     label = label.clone().cpu().data.numpy()
-    colored_label = np.vectorize(lambda x: label_colours[int(x)])
+    label_colours = np.asarray(label_colours)
+    colored_label = np.vectorize(lambda x: label_colours[x], signature='()->(n)')
 
-    colored = np.asarray(colored_label(label)).astype(np.float32)
+    # TODO: I feel terrible about this for loop :(
+    colored = np.asarray(colored_label(label)).astype(np.uint8)
     colored = colored.squeeze()
 
     try:
         return torch.from_numpy(colored.transpose([1, 0, 2, 3]))
     except ValueError:
         return torch.from_numpy(colored[np.newaxis, ...])
+
+# https://numba.pydata.org/numba-doc/dev/user/vectorize.html
+# Could do this at some point
+@numba.jit
+def color_label_cpu(label, label_colours=label_colours):
+    label_colours = np.asarray(label_colours)
+
+    # TODO: I feel terrible about this for loop :(
+    colored = [[[None]*label.shape[2]]*label.shape[1]]*label.shape[0]
+    for i in range(label.shape[0]):
+      for j in range(label.shape[1]):
+        for k in range(label.shape[2]):
+          colored[i][j][k] = label_colours[label[i][j][k]]
+    colored = np.asarray(colored).astype(np.uint8)
+    colored = colored.squeeze()
+
+    return colored[np.newaxis, ...]
 
 
 def print_log(global_step, epoch, local_count, count_inter, dataset_size, loss, time_inter):
