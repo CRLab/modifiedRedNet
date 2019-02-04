@@ -13,16 +13,16 @@ import torch
 
 
 # hardcoding values from RedNet_train import image_h, image_w
-image_h = 512
-image_w = 512
+image_h = 256
+image_w = 256
 
 # Gibson Dataset
-img_dir_train_file = './gibson_data/img_dir_train.txt'
-depth_dir_train_file = './gibson_data/depth_dir_train.txt'
-label_dir_train_file = './gibson_data/label_train.txt'
-img_dir_test_file = './gibson_data/img_dir_test.txt'
-depth_dir_test_file = './gibson_data/depth_dir_test.txt'
-label_dir_test_file = './gibson_data/label_test.txt'
+img_dir_train_file = './data/stanford_only_data/img_dir_train.txt'
+depth_dir_train_file = './data/stanford_only_data/depth_dir_train.txt'
+label_dir_train_file = './data/stanford_only_data/label_train.txt'
+img_dir_test_file = './data/stanford_only_data/img_dir_test.txt'
+depth_dir_test_file = './data/stanford_only_data/depth_dir_test.txt'
+label_dir_test_file = './data/stanford_only_data/label_test.txt'
 
 # changed for minos
 # img_dir_train_file = './data/minos_data/img_dir_train.txt'

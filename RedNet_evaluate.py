@@ -19,19 +19,19 @@ import numpy as np
 parser = argparse.ArgumentParser(description='RedNet Indoor Sementic Segmentation')
 
 parser.add_argument('--path_rgb_test', 
-                    default='data/gibson_data/img_dir_test.txt', 
+                    default='data/stanford_only_dataset/img_dir_test.txt', 
                     help='path to rgb testfile')
 parser.add_argument('--path_depth_test',
-                    default='data/gibson_data/depth_dir_test.txt',
+                    default='data/stanford_only_dataset/depth_dir_test.txt',
                     help='path to depth testfile')
 parser.add_argument('--path_labels_test',
-                    default='data/gibson_data/label_test.txt',
+                    default='data/stanford_only_dataset/label_test.txt',
                     help='path to labels testfile')
 parser.add_argument('--path_metadata_train',
-                    default='data/gibson_data/meta_train.json',
+                    default='data/stanford_only_dataset/meta_train.json',
                     help='path to train metadata json')
 parser.add_argument('--path_metadata_train',
-                    default='data/gibson_data/meta_test.json',
+                    default='data/stanford_only_dataset/meta_test.json',
                     help='path to test metadata json')
 
 
