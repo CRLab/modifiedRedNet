@@ -174,7 +174,8 @@ def load_ckpt(model, optimizer, model_file, device):
             checkpoint = torch.load(model_file)
         else:
             checkpoint = torch.load(model_file, map_location=lambda storage, loc: storage)
-        model.load_state_dict(checkpoint['state_dict'])
+        corrected_state_dict = [elem[7:] for elem in checkpoint['state_dict']]
+        model.load_state_dict(corrected_state_dict)
         if optimizer:
             optimizer.load_state_dict(checkpoint['optimizer'])
         print("=> loaded checkpoint '{}' (epoch {})"
