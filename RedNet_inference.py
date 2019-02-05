@@ -16,19 +16,19 @@ from utils.utils import load_ckpt
 parser = argparse.ArgumentParser(description='RedNet Indoor Sementic Segmentation')
 
 parser.add_argument('--path_rgb_test', 
-                    default='data/stanford_only_data/img_dir_test.txt', 
+                    default='data/gibson_data/img_dir_test.txt', 
                     help='path to rgb testfile')
 parser.add_argument('--path_depth_test',
-                    default='data/stanford_only_data/depth_dir_test.txt',
+                    default='data/gibson_data/depth_dir_test.txt',
                     help='path to depth testfile')
 parser.add_argument('--path_labels_test',
-                    default='data/stanford_only_data/label_test.txt',
+                    default='data/gibson_data/label_test.txt',
                     help='path to labels testfile')
 parser.add_argument('--path_metadata_train',
-                    default='data/stanford_only_data/meta_train.json',
+                    default='data/gibson_data/meta_train.json',
                     help='path to training metadata json')
 parser.add_argument('--path_metadata_test',
-                    default='data/stanford_only_data/meta_test.json',
+                    default='data/gibson_data/meta_test.json',
                     help='path to test metadata json')
 
 
@@ -123,7 +123,7 @@ def inference():
         labels = labels.clone().cpu().data.numpy()
         if len(np.unique(labels)) == 1:
             continue
-
+        
         output = utils.color_label_cpu(labels, label_colours=colours)[0]
 
         base = os.path.basename(this_label)
