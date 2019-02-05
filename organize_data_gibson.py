@@ -24,7 +24,8 @@ import pathos.multiprocessing
 low = 80
 high = 250
 
-stanford_dataset_labels = None
+label_dictionary = {}
+label_name_to_index = None
 
 # for Matterport 3D dataset
 table_labels = [15, 47, 73, 81, 89, 97, 177, 215, 216, 472, 474, 477, 661, 677, 678, 720, 732, 745, 756, 842]
@@ -60,12 +61,37 @@ def get_color(index):
 """ Label functions """
 
 
-def load_labels(label_file):
+def load_labels(dataset_name, label_materials_file):
     """ Convenience function for loading JSON labels """
-    with open(label_file) as f:
-        labels = json.load(f)
-        table_only_labels = np.array([1 if "table" in label else 0 for label in labels])
-        return table_only_labels
+    # Apparently we cannot use the labels provided at their repo: https://github.com/alexsax/2D-3D-Semantics
+    # Instead you have to use the labels as they appear in the `semantic.mtl` file within the dataset folder
+    # So for example, trial `space7` has a `semantic.mtl` file, you'll load in the material names, then using those
+    # indices assign them to a specific label, which you create a map for.
+    global label_dictionary, label_name_to_index
+
+    # If we have already loaded the labels for this dataset, return
+    if dataset_name in label_dictionary:
+        return
+
+    # Read the materials one by one and index them
+    materials = []
+    with open(label_materials_file, 'r') as sem:
+        for line in sem:
+            line_split = line.split(" ")
+            if line_split[0] == "newmtl":
+                material_name = line_split[1].strip("\n")
+                material_category = material_name.split("_")[0]
+                materials.append(material_category)
+
+    # If we have not yet defined an index for the label names:
+    if label_name_to_index is None:
+        label_name_to_index = {}
+        unique_material_categories = np.unique(materials)
+        for i in range(len(unique_material_categories)):
+            label_name_to_index[unique_material_categories[i]] = i
+
+    # Map the indices onto the names in the list
+    label_dictionary[dataset_name] = np.array(map(lambda label_name: label_name_to_index[label_name], materials))
 
 
 def parse_label(label):
@@ -93,8 +119,8 @@ def normalize_array_for_matplotlib(arr_to_rescale):
     return (arr_to_rescale / np.abs(arr_to_rescale).max()) / 2 + 0.5
 
 
-def concatenate_segmentation_labels(segmentation_npy_path, out_path, is_stanford):
-    global stanford_dataset_labels, table_labels, table_values
+def concatenate_segmentation_labels(segmentation_npy_path, out_path, is_stanford, dataset_name):
+    global label_dictionary, table_labels, table_values
     # https://github.com/niessner/Matterport/blob/master/metadata/category_mapping.tsv
 
     segmentation = np.load(segmentation_npy_path)
@@ -104,8 +130,11 @@ def concatenate_segmentation_labels(segmentation_npy_path, out_path, is_stanford
         B = segmentation[:, :, 2]
         pixel_labels = R * 256 * 256 + G * 256 + B
         pixel_labels = pixel_labels.reshape((pixel_labels.shape[0] * pixel_labels.shape[1]))
-        table_only_labels = stanford_dataset_labels[pixel_labels]
-        np.save(out_path, table_only_labels)
+
+        labeled_pixels = label_dictionary[dataset_name][pixel_labels]
+        # unique, counts = np.unique(labeled_pixels, return_counts=True)
+
+        np.save(out_path, labeled_pixels)
 
     else:
         segmentation = scipy.misc.imresize(segmentation, (256, 256))
@@ -152,6 +181,8 @@ def generate_metadata(root_dir, rgb_file_path, depth_file_path, labels_file_path
         labels_file_path (str): path to labels
         save_loc (str): save location path
     """
+    global label_name_to_index
+
     # calculate dimensions of images
     # To maximize efficiency, the function assumes that images are of the same
     # dimension
@@ -190,9 +221,15 @@ def generate_metadata(root_dir, rgb_file_path, depth_file_path, labels_file_path
              random.randint(low, high)))
     assert len(colours) == num_classes + 1
 
-    json_dict = {'height': dimensions[0], 'width': dimensions[1],
-                 'colours': colours, 'med_freq': med_freq_list,
-                 'num_classes': len(class_count), 'class_prob': class_prob}
+    json_dict = {
+         'height': dimensions[0],
+         'width': dimensions[1],
+         'colours': colours,
+         'med_freq': med_freq_list,
+         'num_classes': len(class_count),
+         'class_prob': class_prob,
+         'label_to_index_dict': label_name_to_index
+    }
 
     with open(save_loc, 'w') as labels:
         json.dump(json_dict, labels)
@@ -200,15 +237,14 @@ def generate_metadata(root_dir, rgb_file_path, depth_file_path, labels_file_path
     return json_dict
 
 
-def handle_job((source_rgb_path, source_depth_path, source_segmentation_path, out_rgb_path, out_depth_path, out_segmentation_path, is_stanford)):
+def handle_job(
+        (source_rgb_path, source_depth_path, source_segmentation_path, out_rgb_path, out_depth_path, out_segmentation_path, is_stanford, dataset_name)):
     npy_to_rgb(source_rgb_path, out_rgb_path)
     npy_to_depth(source_depth_path, out_depth_path)
-    concatenate_segmentation_labels(source_segmentation_path, out_segmentation_path, is_stanford)
+    concatenate_segmentation_labels(source_segmentation_path, out_segmentation_path, is_stanford, dataset_name)
 
 
-def migrate_examples(root_dir, dataset_name, stanford_labels_path):
-    global stanford_dataset_labels
-
+def migrate_examples(root_dir, dataset_name, gibson_asset_dataset_path):
     trial_names = os.listdir(root_dir)
 
     rgb_npy_path = []
@@ -225,23 +261,29 @@ def migrate_examples(root_dir, dataset_name, stanford_labels_path):
     jobs = []
     index = 0
     for trial_name in trial_names:
+        if trial_name == "data":
+            continue
+
         if os.path.isdir(os.path.join(root_dir, trial_name)):
             is_stanford = not trial_name.startswith("house")
-            if is_stanford and stanford_dataset_labels is None:
-                stanford_dataset_labels = load_labels(stanford_labels_path)
+            trial_name_truncated = trial_name.split("_")[0]
+            if is_stanford:
+                material_path = os.path.join(gibson_asset_dataset_path, trial_name_truncated, "semantic.mtl")
+                load_labels(trial_name_truncated, material_path)
 
             samples = os.listdir(os.path.join(root_dir, trial_name))
             samples = sorted(samples)
 
             samples = [sample for sample in samples if ".npy" in sample]
-            num_samples = len(samples)/3
+            num_samples = len(samples) / 3
 
             for i in range(num_samples):
                 source_rgb_path = os.path.join(root_dir, trial_name, "{}_rgb.npy".format(i))
                 source_depth_path = os.path.join(root_dir, trial_name, "{}_depth.npy".format(i))
                 source_segmentation_path = os.path.join(root_dir, trial_name, "{}_segmentation.npy".format(i))
 
-                if os.path.isfile(source_rgb_path) and os.path.isfile(source_depth_path) and os.path.isfile(source_segmentation_path):
+                if os.path.isfile(source_rgb_path) and os.path.isfile(source_depth_path) and os.path.isfile(
+                        source_segmentation_path):
                     rgb_root_path = os.path.join('data', dataset_name, "rgb", "{}_rgb.png".format(index))
                     depth_root_path = os.path.join('data', dataset_name, "depth", "{}_depth.png".format(index))
                     segmentation_root_path = os.path.join('data', dataset_name, "segmentation",
@@ -250,7 +292,8 @@ def migrate_examples(root_dir, dataset_name, stanford_labels_path):
                     out_depth_path = os.path.join(root_dir, depth_root_path)
                     out_segmentation_path = os.path.join(root_dir, segmentation_root_path)
 
-                    jobs.append((source_rgb_path, source_depth_path, source_segmentation_path, out_rgb_path, out_depth_path, out_segmentation_path, is_stanford))
+                    jobs.append((source_rgb_path, source_depth_path, source_segmentation_path, out_rgb_path,
+                                 out_depth_path, out_segmentation_path, is_stanford, trial_name_truncated))
 
                     rgb_npy_path.append(rgb_root_path)
                     depth_npy_path.append(depth_root_path)
@@ -262,9 +305,9 @@ def migrate_examples(root_dir, dataset_name, stanford_labels_path):
     bar = progressbar.ProgressBar(max_value=len(jobs))
     bar.update(0)
     pool = pathos.multiprocessing.Pool(processes=32)
-    #for job in jobs:
-    #    handle_job(job)
-    #    bar += 1
+    # for job in jobs:
+    #     handle_job(job)
+    #     bar += 1
     for _ in pool.imap_unordered(handle_job, jobs):
         bar += 1
 
@@ -276,7 +319,9 @@ def parse_args():
     parser.add_argument("root_dir", type=str, default=".", help="""Root directory of given trials of experiment""")
     parser.add_argument("train_ratio", type=float, default=0.8, help="""Ratio of training to test examples""")
     parser.add_argument("dataset_name", type=str, default="gibson_data", help="""Name of dataset""")
-    parser.add_argument("stanford_labels_path", type=str, default="./2d3ds_labels.json", help="""path to 2d3ds_labels""")
+    parser.add_argument("gibson_asset_dataset_path", type=str,
+                        default="/home/david/workspace/GibsonEnv/gibson/assets/dataset",
+                        help="""path to Gibson environments""")
 
     args = parser.parse_args()
 
@@ -304,7 +349,7 @@ def main():
     train_meta_filepath = os.path.join(args.root_dir, 'data', args.dataset_name, 'meta_train.json')
     test_meta_filepath = os.path.join(args.root_dir, 'data', args.dataset_name, 'meta_test.json')
 
-    rgb_paths, depth_paths, label_paths = migrate_examples(args.root_dir, args.dataset_name, args.stanford_labels_path)
+    rgb_paths, depth_paths, label_paths = migrate_examples(args.root_dir, args.dataset_name, args.gibson_asset_dataset_path)
     rgb_paths = np.array(rgb_paths)
     depth_paths = np.array(depth_paths)
     label_paths = np.array(label_paths)
@@ -324,7 +369,8 @@ def main():
     save_paths(label_paths, test_idx, test_labels_filepath)
 
     # generate the metadata files
-    generate_metadata(args.root_dir, train_rgb_filepath, train_depth_filepath, train_labels_filepath, train_meta_filepath)
+    generate_metadata(args.root_dir, train_rgb_filepath, train_depth_filepath, train_labels_filepath,
+                      train_meta_filepath)
     generate_metadata(args.root_dir, test_rgb_filepath, test_depth_filepath, test_labels_filepath, test_meta_filepath)
 
 
