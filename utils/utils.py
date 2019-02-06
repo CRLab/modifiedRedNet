@@ -175,10 +175,11 @@ def load_ckpt(model, optimizer, model_file, device):
         else:
             checkpoint = torch.load(model_file, map_location=lambda storage, loc: storage)
         
-        # corrected_state_dict =  {k[7:]: v for k, v in checkpoint['state_dict'].items()}
+        corrected_state_dict =  {k[7:]: v for k, v in checkpoint['state_dict'].items()}
         # This was to fix the issue where it was appending "module." to the front of the state labels
         
-        model.load_state_dict(checkpoint['state_dict'])
+        model.load_state_dict(corrected_state_dict)
+        #model.load_state_dict(checkpoint['state_dict'])
         if optimizer:
             optimizer.load_state_dict(checkpoint['optimizer'])
         print("=> loaded checkpoint '{}' (epoch {})"

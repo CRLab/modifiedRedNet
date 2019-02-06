@@ -129,9 +129,11 @@ def concatenate_segmentation_labels(segmentation_npy_path, out_path, is_stanford
         G = segmentation[:, :, 1]
         B = segmentation[:, :, 2]
         pixel_labels = R * 256 * 256 + G * 256 + B
-        pixel_labels = pixel_labels.reshape((pixel_labels.shape[0] * pixel_labels.shape[1]))
+        height, width = pixel_labels.shape[0], pixel_labels.shape[1]
+        pixel_labels = pixel_labels.reshape((height * width))
 
         labeled_pixels = label_dictionary[dataset_name][pixel_labels]
+        labeled_pixels = np.reshape(labeled_pixels, (height, width))
         # unique, counts = np.unique(labeled_pixels, return_counts=True)
 
         np.save(out_path, labeled_pixels)

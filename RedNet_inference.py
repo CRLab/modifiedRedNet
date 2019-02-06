@@ -129,6 +129,8 @@ def inference():
         base = os.path.basename(this_label)
         base = base[:-4] + '.png'
         final_output = os.path.join(args.output, base)
+
+        print(final_output.shape)
         
         imageio.imsave(final_output, output)
 
