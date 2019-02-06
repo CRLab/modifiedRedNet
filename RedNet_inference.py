@@ -50,31 +50,46 @@ def inference():
     n_saved = 0
 
     for batch_idx, sample in enumerate(test_loader):
-        if n_saved > 2500:
-            exit()
 
         image = sample['image'].to(device)
         depth = sample['depth'].to(device)
         label = sample['label'].to(device)
 
-#        pred = model(image, depth)
+        pred = model(image, depth)
+
+        tp_detections = 0
+        fn_detections = 0
+        tn_detections = 0
+        fp_detections = 0
 
         for i in range(image.shape[0]):
-            n_saved += 1
-            print("%s: %s, [%s]" % (n_saved,  "has_table" if 1 in label[i].numpy() else "no_table", np.unique(label[i].numpy())))
- #           output = utils.color_label(torch.max(pred[i], 0)[1] + 1)
-            gt_output = utils.color_label(label[i] + 1)
-            imageio.imsave(args.output + "%s-%s.png" % (n_saved, "has_table" if 1 in label[i].numpy() else "no_table"), image[i].numpy().transpose(1, 2, 0))
-            imageio.imsave(args.output + "%s-%s-gt.png" % (n_saved, "has_table" if 1 in label[i].numpy() else "no_table"), gt_output.numpy()[0].transpose((1, 2, 0)))
-#            imageio.imsave(args.output + "%s-%s-seg.png" % (n_saved, i), output.cpu().numpy()[0].transpose((1, 2, 0)))
+            if 11 in label[i].numpy():
+                if 11 in pred[i].cpu().detach().numpy():
+                    tp_detections += 1
+                else:
+                    fn_detections += 1
+            else: # no table in gt scene
+                if 11 in pred[i].cpu().detach().numpy():
+                    fp_detections += 1
+                else:
+                    tn_detections += 1
+
+        if batch_idx % 100 == 0:
+            for i in range(image.shape[0]):
+                n_saved += 1
+                print("%s: %s, [%s]" % (n_saved,  "has_table" if 11 in label[i].numpy() else "no_table", np.unique(label[i].numpy())))
+                output = utils.color_label(torch.max(pred[i], 0)[1] + 1)
+                gt_output = utils.color_label(label[i] + 1)
+                imageio.imsave(args.output + "%s-%s.png" % (n_saved, "has_table" if 11 in label[i].numpy() else "no_table"), image[i].numpy().transpose(1, 2, 0))
+                imageio.imsave(args.output + "%s-%s-gt.png" % (n_saved, "has_table" if 11 in label[i].numpy() else "no_table"), gt_output.numpy()[0].transpose((1, 2, 0)))
+                imageio.imsave(args.output + "%s-%s-seg.png" % (n_saved, "has_table" if 11 in label[i].numpy() else "no_table"), output.cpu().numpy()[0].transpose((1, 2, 0)))
 
 
-
-    # for batch_idx, sample in enumerate(test_loader):
-    #     image = sample['image'].to(device)
-    #     depth = sample['depth'].to(device)
-    #     pred = model(image, depth)
-        
+    print("TP: %s" % tp_detections)
+    print("FP: %s" % fp_detections)
+    print("TN: %s" % tn_detections)
+    print("FN: %s" % fn_detections)
 
 if __name__ == '__main__':
+
     inference()
