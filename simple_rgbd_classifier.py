@@ -6,14 +6,14 @@ from keras.layers import convolutional, pooling, core, Input, concatenate
 from keras.callbacks import ModelCheckpoint, EarlyStopping, ProgbarLogger
 
 img_width, img_height = 256, 256
-train_data_dir = "/media/david/Windows7_OS/Users/Administrator/ros/gibson_ws/recordings/data/classifier_data/rgb"
-validation_data_dir = "../Videos/rgb-dataset"
-train_data_dir_nir = "/media/david/Windows7_OS/Users/Administrator/ros/gibson_ws/recordings/data/classifier_data/depth"
-validation_data_dir_nir = "../Videos/d-dataset"
-nb_train_samples = 207920
-nb_validation_samples = 2079
-batch_size = 10
-epochs = 4
+train_data_dir = "data/classifier_data/train/rgb"
+validation_data_dir = "data/classifier_data/validate/rgb"
+train_data_dir_nir = "data/classifier_data/train/depth"
+validation_data_dir_nir = "data/classifier_data/validate/depth"
+nb_train_samples = 1298*0.8
+nb_validation_samples = 1298*0.2
+batch_size = 20
+epochs = 10
 num_classes = 4
 
 
@@ -61,8 +61,8 @@ def custom_iterator(Xp, Xs):
     from itertools import izip
     from keras.preprocessing.image import ImageDataGenerator
 
-    ig1 = ImageDataGenerator(rescale=1./255, validation_split=0.25)
-    ig2 = ImageDataGenerator(rescale=1./255, validation_split=0.25)
+    ig1 = ImageDataGenerator(rescale=1./255)
+    ig2 = ImageDataGenerator(rescale=1./255)
     temp1 = ig1.flow_from_directory(Xp,target_size = (img_height, img_width), batch_size = batch_size,class_mode = "categorical",seed=seed)
     temp2 = ig2.flow_from_directory(Xs,target_size = (img_height, img_width), batch_size = batch_size,class_mode = "categorical",seed=seed)
 
@@ -72,8 +72,8 @@ def custom_iterator(Xp, Xs):
 
 # Save the model according to the conditions  
 progbar = ProgbarLogger(count_mode='steps')
-checkpoint = ModelCheckpoint("rgbd.{epoch:02d}-{val_loss:.2f}.hdf5", monitor='val_acc', verbose=1, save_best_only=True, save_weights_only=False, mode='auto', period=1)
-early = EarlyStopping(monitor='val_acc', min_delta=0, patience=1, verbose=1, mode='auto')
+checkpoint = ModelCheckpoint("rgbd.{epoch:02d}-{val_accuracy:.2f}.hdf5", monitor='val_accuracy', verbose=1, save_best_only=True, save_weights_only=False, mode='auto', period=1)
+early = EarlyStopping(monitor='val_accuracy', min_delta=0, patience=1, verbose=1, mode='auto')
 
 
 # Train the model 
@@ -81,7 +81,7 @@ model1.fit_generator(
 	custom_iterator(train_data_dir_nir, train_data_dir),
 	steps_per_epoch = nb_train_samples,
 	epochs = epochs,
-	# validation_data = custom_iterator(validation_data_dir_nir, validation_data_dir),
+	validation_data = custom_iterator(validation_data_dir_nir, validation_data_dir),
 	validation_steps = nb_validation_samples, 
 	callbacks = [progbar, checkpoint, early]
 )

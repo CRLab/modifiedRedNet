@@ -21,6 +21,8 @@ import json
 import argparse
 import yaml
 import pathos.multiprocessing
+import random
+
 
 low = 80
 high = 250
@@ -185,7 +187,7 @@ def action_txt_to_class(action_txt_path):
     action_dict = yaml.load(open(action_txt_path, 'r'))
     angular = action_dict['angular']
     linear = action_dict['linear']
-    
+
     if linear[0] > 0:
         return 'forward'
     if linear[0] < 0:
@@ -279,13 +281,12 @@ def migrate_examples(root_dir, dataset_name, gibson_asset_dataset_path):
 
     if not os.path.isdir(os.path.join(root_dir, 'data', dataset_name)):
         os.makedirs(os.path.join(root_dir, 'data', dataset_name))
-        os.makedirs(os.path.join(root_dir, 'data', dataset_name, 'rgb'))
-        os.makedirs(os.path.join(root_dir, 'data', dataset_name, 'depth'))
-        os.makedirs(os.path.join(root_dir, 'data', dataset_name, 'segmentation'))
 
     # Build list of jobs
     jobs = []
     index = 0
+    random.seed(0)
+
     for trial_name in trial_names:
         if trial_name == "data":
             continue
@@ -301,9 +302,15 @@ def migrate_examples(root_dir, dataset_name, gibson_asset_dataset_path):
             samples = sorted(samples)
 
             samples = [sample for sample in samples if ".npy" in sample]
+            random.shuffle(samples)
             num_samples = len(samples) / 3
 
             for i in range(2, num_samples):
+                if i < num_samples * 0.8:
+                    bucket = "train"
+                else:
+                    bucket = "validate"
+
                 source_rgb_path = os.path.join(root_dir, trial_name, "{}_rgb.npy".format(i))
                 source_depth_path = os.path.join(root_dir, trial_name, "{}_depth.npy".format(i))
                 source_segmentation_path = os.path.join(root_dir, trial_name, "{}_segmentation.npy".format(i))
@@ -312,13 +319,13 @@ def migrate_examples(root_dir, dataset_name, gibson_asset_dataset_path):
                 if os.path.isfile(source_rgb_path) and os.path.isfile(source_depth_path) and os.path.isfile(source_segmentation_path) and os.path.isfile(source_action_txt_path):
                     class_name = action_txt_to_class(source_action_txt_path)
 
-                    if not os.path.isdir(os.path.join(root_dir, 'data', dataset_name, "rgb", class_name)):
-                        os.makedirs(os.path.join(root_dir, 'data', dataset_name, "rgb", class_name))
-                        os.makedirs(os.path.join(root_dir, 'data', dataset_name, "depth", class_name))
+                    if not os.path.isdir(os.path.join(root_dir, 'data', dataset_name, bucket, "rgb", class_name)):
+                        os.makedirs(os.path.join(root_dir, 'data', dataset_name, bucket, "rgb", class_name))
+                        os.makedirs(os.path.join(root_dir, 'data', dataset_name, bucket, "depth", class_name))
 
-                    rgb_root_path = os.path.join('data', dataset_name, "rgb", class_name, "{}_rgb.png".format(index))
-                    depth_root_path = os.path.join('data', dataset_name, "depth", class_name, "{}_depth.png".format(index))
-                    segmentation_root_path = os.path.join('data', dataset_name, "segmentation", class_name, "{}_segmentation.npy".format(index))
+                    rgb_root_path = os.path.join('data', dataset_name, bucket, "rgb", class_name, "{}_rgb.png".format(index))
+                    depth_root_path = os.path.join('data', dataset_name, bucket, "depth", class_name, "{}_depth.png".format(index))
+                    segmentation_root_path = os.path.join('data', dataset_name, bucket, "segmentation", class_name, "{}_segmentation.npy".format(index))
 
                     out_rgb_path = os.path.join(root_dir, rgb_root_path)
                     out_depth_path = os.path.join(root_dir, depth_root_path)
@@ -391,13 +398,13 @@ def main():
     test_idx = np.array(list(set(range(len(depth_paths))) - set(train_idx)))
 
     # writing into the training files
-    save_paths(rgb_paths, train_idx, train_rgb_filepath)
-    save_paths(depth_paths, train_idx, train_depth_filepath)
-    # save_paths(label_paths, train_idx, train_labels_filepath)
+    # save_paths(rgb_paths, train_idx, train_rgb_filepath)
+    # save_paths(depth_paths, train_idx, train_depth_filepath)
+    # # save_paths(label_paths, train_idx, train_labels_filepath)
 
-    # writing into the testing files
-    save_paths(rgb_paths, test_idx, test_rgb_filepath)
-    save_paths(depth_paths, test_idx, test_depth_filepath)
+    # # writing into the testing files
+    # save_paths(rgb_paths, test_idx, test_rgb_filepath)
+    # save_paths(depth_paths, test_idx, test_depth_filepath)
     # save_paths(label_paths, test_idx, test_labels_filepath)
 
     # generate the metadata files
