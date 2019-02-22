@@ -13,8 +13,8 @@ validation_data_dir_nir = "data/classifier_data/validate/depth"
 nb_train_samples = 1298*0.8
 nb_validation_samples = 1298*0.2
 batch_size = 20
-epochs = 10
-num_classes = 4
+epochs = 30
+num_classes = 3
 
 
 inp = Input(shape = (img_width , img_height, 3))
@@ -66,14 +66,17 @@ def custom_iterator(Xp, Xs):
     temp1 = ig1.flow_from_directory(Xp,target_size = (img_height, img_width), batch_size = batch_size,class_mode = "categorical",seed=seed)
     temp2 = ig2.flow_from_directory(Xs,target_size = (img_height, img_width), batch_size = batch_size,class_mode = "categorical",seed=seed)
 
+    print(temp1.class_indices)
+    print(temp2.class_indices)
+
     for batch in izip(temp1,temp2):
         yield [batch[0][0], batch[1][0]], [batch[0][1]]
 
 
 # Save the model according to the conditions  
 progbar = ProgbarLogger(count_mode='steps')
-checkpoint = ModelCheckpoint("rgbd.{epoch:02d}-{val_accuracy:.2f}.hdf5", monitor='val_accuracy', verbose=1, save_best_only=True, save_weights_only=False, mode='auto', period=1)
-early = EarlyStopping(monitor='val_accuracy', min_delta=0, patience=1, verbose=1, mode='auto')
+checkpoint = ModelCheckpoint("./models/rgbd.{epoch:02d}-{val_acc:.2f}.hdf5", monitor='val_acc', verbose=1, save_best_only=True, save_weights_only=False, mode='auto', period=1)
+early = EarlyStopping(monitor='val_acc', min_delta=0, patience=1, verbose=1, mode='auto')
 
 
 # Train the model 
